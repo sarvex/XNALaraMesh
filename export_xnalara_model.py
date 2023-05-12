@@ -47,15 +47,11 @@ def uvTransformLayers(uvLayers):
 
 
 def getArmature(selected_obj):
-    armature_obj = next((obj for obj in selected_obj
-                         if obj.type == 'ARMATURE'), None)
-    return armature_obj
+    return next((obj for obj in selected_obj if obj.type == 'ARMATURE'), None)
 
 
 def fillArray(array, minLen, value):
-    # Complete the array with selected value
-    filled = array + [value] * (minLen - len(array))
-    return filled
+    return array + [value] * (minLen - len(array))
 
 
 def getOutputFilename(xpsSettingsAux):
@@ -117,8 +113,7 @@ def xpsExport():
         poseString = write_ascii_xps.writePose(xpsPoseData).read()
 
     header = None
-    hasHeader = bin_ops.hasHeader(xpsSettings.format)
-    if hasHeader:
+    if hasHeader := bin_ops.hasHeader(xpsSettings.format):
         header = mock_xps_data.buildHeader(poseString)
         header.version_mayor = xpsSettings.versionMayor
         header.version_minor = xpsSettings.versionMinor
@@ -194,11 +189,8 @@ def exportMeshes(selectedArmature, selectedMeshes):
 
 
 def makeNamesFromMaterials(mesh):
-    separatedMeshNames = []
     materials = mesh.data.materials
-    for material in materials:
-        separatedMeshNames.append(material.name)
-    return separatedMeshNames
+    return [material.name for material in materials]
 
 
 def makeNamesFromMesh(mesh):
@@ -206,9 +198,7 @@ def makeNamesFromMesh(mesh):
     renderType = xps_material.makeRenderType(meshFullName)
     meshName = renderType.meshName
 
-    separatedMeshNames = []
-    separatedMeshNames.append(xps_material.makeRenderTypeName(renderType))
-
+    separatedMeshNames = [xps_material.makeRenderTypeName(renderType)]
     materialsCount = len(mesh.data.materials)
     # separate mesh by materials
     for mat_idx in range(1, materialsCount):
@@ -277,8 +267,7 @@ def makeXpsTexture(mesh, material):
 
 def getTextures(mesh, material):
     textures = []
-    xpsTextures = makeXpsTexture(mesh, material)
-    return xpsTextures
+    return makeXpsTexture(mesh, material)
 
 
 def getXpsMatTextures(mesh):
@@ -291,10 +280,7 @@ def getXpsMatTextures(mesh):
 
 
 def generateVertexKey(vertex, uvCoord, seamSideId):
-    # Generate a unique key for vertex using coords,normal,
-    # first UV and side of seam
-    key = '{}{}{}{}'.format(vertex.co, vertex.normal, uvCoord, seamSideId)
-    return key
+    return f'{vertex.co}{vertex.normal}{uvCoord}{seamSideId}'
 
 
 def getXpsVertices(selectedArmature, mesh):
@@ -319,7 +305,7 @@ def getXpsVertices(selectedArmature, mesh):
 
     matCount = len(mesh.data.materials)
     if (matCount > 0):
-        for idx in range(matCount):
+        for _ in range(matCount):
             xpsMatVertices.append([])  # Vertices separated by material
             xpsMatFaces.append([])  # Faces separated by material
             mapMatVertexKeys.append({})
@@ -338,7 +324,7 @@ def getXpsVertices(selectedArmature, mesh):
     tessface_vert_color = mesh.data.vertex_colors
     meshEdgeKeys = mesh.data.edge_keys
 
-    vertEdges = [[] for x in range(len(meshVerts))]
+    vertEdges = [[] for _ in range(len(meshVerts))]
     tessEdgeFaces = {}
 
     preserveSeams = xpsSettings.preserveSeams
@@ -383,24 +369,30 @@ def getXpsVertices(selectedArmature, mesh):
             if (preserveSeams and hasSeams):
                 connectedFaces = set()
                 faceEdges = vertEdges[vertIndex]
-                faceSeams = [edge for edge in faceEdges if edge.use_seam]
-
-                if (len(faceSeams) >= 1):
+                if faceSeams := [edge for edge in faceEdges if edge.use_seam]:
                     vertIsBorder = any(tessEdgeCount[edge.index] != 2 for edge in faceEdges)
                     if (len(faceSeams) > 1) or (len(faceSeams) == 1 and vertIsBorder):
 
                         oldFacesList = set()
-                        connectedFaces = set([face])
+                        connectedFaces = {face}
                         while oldFacesList != connectedFaces:
 
                             oldFacesList = connectedFaces
 
-                            allEdgeKeys = set(connEdgeKey for connface in connectedFaces for connEdgeKey in connface.edge_keys)
+                            allEdgeKeys = {
+                                connEdgeKey
+                                for connface in connectedFaces
+                                for connEdgeKey in connface.edge_keys
+                            }
                             connEdgesKeys = [edge.key for edge in faceEdges]
                             connEdgesNotSeamsKeys = [seam.key for seam in faceSeams]
 
                             connectedEdges = allEdgeKeys.intersection(connEdgesKeys).difference(connEdgesNotSeamsKeys)
-                            connectedFaces = set(tessFaces[connFace] for connEdge in connectedEdges for connFace in tessEdgeFaces[connEdge])
+                            connectedFaces = {
+                                tessFaces[connFace]
+                                for connEdge in connectedEdges
+                                for connFace in tessEdgeFaces[connEdge]
+                            }
 
                             connectedFaces.add(face)
 
@@ -414,18 +406,15 @@ def getXpsVertices(selectedArmature, mesh):
                 vertexID = mapVertexKeys[vertexKey]
             else:
                 vCoord = coordTransform(objectMatrix @ vertex.co)
-                if verts_nor:
-                    normal = Vector(face.split_normals[vertEnum])
-                else:
-                    normal = vertex.normal
+                normal = Vector(face.split_normals[vertEnum]) if verts_nor else vertex.normal
                 norm = coordTransform(rotQuaternion @ normal)
                 vColor = getVertexColor(exportVertColors, tessface_vert_color, faceUvIndices[vertEnum])
                 boneId, boneWeight = getBoneWeights(mesh, vertex, armature)
 
-                boneWeights = []
-                for idx in range(len(boneId)):
-                    boneWeights.append(xps_types.BoneWeight(boneId[idx],
-                                                            boneWeight[idx]))
+                boneWeights = [
+                    xps_types.BoneWeight(boneId[idx], boneWeight[idx])
+                    for idx in range(len(boneId))
+                ]
                 vertexID = len(xpsVertices)
                 mapVertexKeys[vertexKey] = vertexID
                 xpsVertex = xps_types.XpsVertex(vertexID, vCoord, norm, vColor, uvs,
@@ -486,9 +475,7 @@ def getXpsFace(faceVerts):
         xpsFaces.append(faceTransform(faceVerts))
     elif len(faceVerts) == 4:
         v1, v2, v3, v4 = faceVerts
-        xpsFaces.append(faceTransform((v1, v2, v3)))
-        xpsFaces.append(faceTransform((v3, v4, v1)))
-
+        xpsFaces.extend((faceTransform((v1, v2, v3)), faceTransform((v3, v4, v1))))
     return xpsFaces
 
 

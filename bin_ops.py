@@ -23,57 +23,47 @@ def roundToMultiple(numToRound, multiple):
 
 def readByte(file):
     numberBin = file.read(1)
-    number = struct.unpack(TypeFormat.Byte, numberBin)[0]
-    return number
+    return struct.unpack(TypeFormat.Byte, numberBin)[0]
 
 
 def writeByte(number):
-    bytesBin = struct.pack(TypeFormat.Byte, number)
-    return bytesBin
+    return struct.pack(TypeFormat.Byte, number)
 
 
 def readUInt16(file):
     numberBin = file.read(2)
-    number = struct.unpack(TypeFormat.UInt16, numberBin)[0]
-    return number
+    return struct.unpack(TypeFormat.UInt16, numberBin)[0]
 
 
 def writeUInt16(number):
-    uInt16 = struct.pack(TypeFormat.UInt16, number)
-    return uInt16
+    return struct.pack(TypeFormat.UInt16, number)
 
 
 def readInt16(file):
     numberBin = file.read(2)
-    number = struct.unpack(TypeFormat.Int16, numberBin)[0]
-    return number
+    return struct.unpack(TypeFormat.Int16, numberBin)[0]
 
 
 def writeInt16(number):
-    int16 = struct.pack(TypeFormat.Int16, number)
-    return int16
+    return struct.pack(TypeFormat.Int16, number)
 
 
 def readUInt32(file):
     numberBin = file.read(4)
-    number = struct.unpack(TypeFormat.UInt32, numberBin)[0]
-    return number
+    return struct.unpack(TypeFormat.UInt32, numberBin)[0]
 
 
 def writeUInt32(number):
-    uInt32 = struct.pack(TypeFormat.UInt32, number)
-    return uInt32
+    return struct.pack(TypeFormat.UInt32, number)
 
 
 def readSingle(file):
     numberBin = file.read(4)
-    single = struct.unpack(TypeFormat.Single, numberBin)[0]
-    return single
+    return struct.unpack(TypeFormat.Single, numberBin)[0]
 
 
 def writeSingle(number):
-    single = struct.pack(TypeFormat.Single, number)
-    return single
+    return struct.pack(TypeFormat.Single, number)
 
 
 def readString(file, length):
@@ -95,9 +85,7 @@ def readString(file, length):
 
 
 def writeString(string):
-    # String Lenght
-    byteString = encodeString(string)
-    return byteString
+    return encodeString(string)
 
 
 def decodeBytes(bytes):

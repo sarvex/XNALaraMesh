@@ -99,20 +99,18 @@ def loadXpsFile(filename):
     dirpath, file = os.path.split(filename)
     basename, ext = os.path.splitext(file)
     if ext.lower() in ('.mesh', '.xps'):
-        xpsData = read_bin_xps.readXpsModel(filename)
+        return read_bin_xps.readXpsModel(filename)
     elif ext.lower() in('.ascii'):
-        xpsData = read_ascii_xps.readXpsModel(filename)
+        return read_ascii_xps.readXpsModel(filename)
     else:
-        xpsData = None
-
-    return xpsData
+        return None
 
 
 def makeMesh(meshFullName):
     mesh_da = bpy.data.meshes.new(meshFullName)
     mesh_ob = bpy.data.objects.new(mesh_da.name, mesh_da)
-    print('Created Mesh: {}'.format(meshFullName))
-    print('New Mesh = {}'.format(mesh_da.name))
+    print(f'Created Mesh: {meshFullName}')
+    print(f'New Mesh = {mesh_da.name}')
     # bpy.context.scene.update()
     # mesh_da.update()
     return mesh_ob
@@ -133,7 +131,7 @@ def xpsImport():
     print("Importing file: ", xpsSettings.filename)
 
     rootDir, file = os.path.split(xpsSettings.filename)
-    print('rootDir: {}'.format(rootDir))
+    print(f'rootDir: {rootDir}')
 
     xpsData = loadXpsFile(xpsSettings.filename)
     if not xpsData:
@@ -167,9 +165,10 @@ def xpsImport():
         boneTailMiddleObject(armature_ob, xpsSettings.connectBones)
 
     # Import default pose
-    if(xpsSettings.importDefaultPose and armature_ob):
-        if(xpsData.header and xpsData.header.pose):
-            import_xnalara_pose.setXpsPose(armature_ob, xpsData.header.pose)
+    if (xpsSettings.importDefaultPose and armature_ob) and (
+        xpsData.header and xpsData.header.pose
+    ):
+        import_xnalara_pose.setXpsPose(armature_ob, xpsData.header.pose)
     return '{FINISHED}'
 
 
@@ -177,8 +176,7 @@ def setMinimumLenght(bone):
     default_length = MIN_BONE_LENGHT
     if bone.length == 0:
         bone.tail = bone.head - Vector((0, .001, 0))
-    if bone.length < default_length:
-        bone.length = default_length
+    bone.length = max(bone.length, default_length)
 
 
 def boneTailMiddleObject(armature_ob, connectBones):
@@ -200,9 +198,8 @@ def setBoneConnect(connectBones):
 
 def connectEditBones(editBones, connectBones):
     for bone in editBones:
-        if bone.parent:
-            if bone.head == bone.parent.tail:
-                bone.use_connect = connectBones
+        if bone.parent and bone.head == bone.parent.tail:
+            bone.use_connect = connectBones
 
 
 def hideBonesByName(armature_objs):
@@ -222,9 +219,12 @@ def hideBonesByVertexGroup(armature_objs):
                     and modif.type == 'ARMATURE' and modif.object == armature]]
 
         # cycle objects and get all vertex groups
-        vertexgroups = set(
-            [vg.name for obj in objs if obj.type == 'MESH'
-                for vg in obj.vertex_groups])
+        vertexgroups = {
+            vg.name
+            for obj in objs
+            if obj.type == 'MESH'
+            for vg in obj.vertex_groups
+        }
 
         bones = armature.data.bones
         # leafBones = [bone for bone in bones if not bone.children]
@@ -237,7 +237,7 @@ def hideBonesByVertexGroup(armature_objs):
 def recurBones(bone, vertexgroups, name):
     visibleChild = False
     for childBone in bone.children:
-        aux = recurBones(childBone, vertexgroups, '{} '.format(name))
+        aux = recurBones(childBone, vertexgroups, f'{name} ')
         visibleChild = visibleChild or aux
 
     visibleChain = bone.name in vertexgroups or visibleChild
@@ -269,15 +269,13 @@ def showAllBones(armature_objs):
 
 def hideBoneChain(bone):
     hideBone(bone)
-    parentBone = bone.parent
-    if parentBone:
+    if parentBone := bone.parent:
         hideBoneChain(parentBone)
 
 
 def showBoneChain(bone):
     showBone(bone)
-    parentBone = bone.parent
-    if parentBone:
+    if parentBone := bone.parent:
         showBoneChain(parentBone)
 
 
@@ -299,21 +297,19 @@ def boneDictRestore(filepath, armatureObj):
 def renameBonesUsingDict(armatureObj, boneDict):
     getbone = armatureObj.data.bones.get
     for key, value in boneDict.items():
-        boneRenamed = getbone(import_xnalara_pose.renameBoneToBlender(key))
-        if boneRenamed:
+        if boneRenamed := getbone(
+            import_xnalara_pose.renameBoneToBlender(key)
+        ):
             boneRenamed.name = value
-        else:
-            boneOriginal = getbone(key)
-            if boneOriginal:
-                boneOriginal.name = value
+        elif boneOriginal := getbone(key):
+            boneOriginal.name = value
 
 
 def createArmature():
-    bones = xpsData.bones
     armature_ob = None
-    if bones:
+    if bones := xpsData.bones:
         boneCount = len(bones)
-        print('Importing Armature', str(boneCount), 'bones')
+        print('Importing Armature', boneCount, 'bones')
 
         armature_da = bpy.data.armatures.new("Armature")
         armature_da.display_type = 'STICK'
@@ -357,8 +353,6 @@ def boneTailMiddle(editBones, connectBones):
     for bone in editBones:
         if (bone.name.lower() == "root ground" or not bone.parent):
             bone.tail = bone.head.xyz + Vector((0, -.5, 0))
-        # elif (bone.name.lower() == "root hips"):
-        #    bone.tail = bone.head.xyz + Vector((0, .2, 0))
         else:
             if visibleBone(bone):
                 childBones = [childBone for childBone in bone.children
@@ -369,16 +363,13 @@ def boneTailMiddle(editBones, connectBones):
             if childBones:
                 # Set tail to children middle
                 bone.tail = Vector(map(sum, zip(*(childBone.head.xyz for childBone in childBones)))) / len(childBones)
-            else:
-                # if no child, set tail acording to parent
-                if bone.parent is not None:
-                    if bone.head.xyz != bone.parent.tail.xyz:
-                        # Tail to diference between bone and parent
-                        delta = bone.head.xyz - bone.parent.tail.xyz
-                    else:
-                        # Tail to same lenght/direction than parent
-                        delta = bone.parent.tail.xyz - bone.parent.head.xyz
-                    bone.tail = bone.head.xyz + delta
+            elif bone.parent is not None:
+                delta = (
+                    bone.head.xyz - bone.parent.tail.xyz
+                    if bone.head.xyz != bone.parent.tail.xyz
+                    else bone.parent.tail.xyz - bone.parent.head.xyz
+                )
+                bone.tail = bone.head.xyz + delta
 
     # Set minimum bone length
     for bone in editBones:
@@ -395,7 +386,7 @@ def markSelected(ob):
 def makeUvs(mesh_da, faces, uvData, vertColors):
     # Create UVLayers
     for i in range(len(uvData[0])):
-        mesh_da.uv_layers.new(name="UV{}".format(str(i + 1)))
+        mesh_da.uv_layers.new(name=f"UV{str(i + 1)}")
     if xpsSettings.vColors:
         mesh_da.vertex_colors.new()
 
@@ -413,9 +404,9 @@ def makeUvs(mesh_da, faces, uvData, vertColors):
 def createJoinedMeshes():
     meshPartRegex = re.compile(r'(!.*)*([\d]+nPart)*!')
     sortedMeshesList = sorted(xpsData.meshes, key=operator.attrgetter('name'))
-    joinedMeshesNames = list(
-        {meshPartRegex.sub('', mesh.name, 0) for mesh in sortedMeshesList})
-    joinedMeshesNames.sort()
+    joinedMeshesNames = sorted(
+        {meshPartRegex.sub('', mesh.name, 0) for mesh in sortedMeshesList}
+    )
     newMeshes = []
     for joinedMeshName in joinedMeshesNames:
         # for each joinedMeshName generate a list of meshes to join
@@ -478,11 +469,11 @@ def importMeshesList(armature_ob):
 
 
 def generateVertexKey(vertex):
-    if xpsSettings.joinMeshRips:
-        key = str(vertex.co) + str(vertex.norm)
-    else:
-        key = str(vertex.id) + str(vertex.co) + str(vertex.norm)
-    return key
+    return (
+        str(vertex.co) + str(vertex.norm)
+        if xpsSettings.joinMeshRips
+        else str(vertex.id) + str(vertex.co) + str(vertex.norm)
+    )
 
 
 def getVertexId(vertex, mapVertexKeys, mergedVertList):
@@ -520,15 +511,15 @@ def importMesh(armature_ob, meshInfo):
     # Create Mesh
     meshFullName = meshInfo.name
     print()
-    print('---*** Importing Mesh {} ***---'.format(meshFullName))
+    print(f'---*** Importing Mesh {meshFullName} ***---')
 
     # Load UV Layers Count
     uvLayerCount = meshInfo.uvCount
-    print('UV Layer Count: {}'.format(str(uvLayerCount)))
+    print(f'UV Layer Count: {str(uvLayerCount)}')
 
     # Load Textures Count
     textureCount = len(meshInfo.textures)
-    print('Texture Count: {}'.format(str(textureCount)))
+    print(f'Texture Count: {textureCount}')
 
     mesh_ob = None
     vertCount = len(meshInfo.vertices)
@@ -540,7 +531,7 @@ def importMesh(armature_ob, meshInfo):
         makeVertexDict(vertexDict, mergedVertList, uvLayers, vertColors, meshInfo.vertices)
 
         # new ID to riginal ID
-        vertexOrig = [[] for x in range(len(mergedVertList))]
+        vertexOrig = [[] for _ in range(len(mergedVertList))]
         for vertId, vert in enumerate(vertexDict):
             vertexOrig[vert].append(vertId)
 
@@ -554,15 +545,15 @@ def importMesh(armature_ob, meshInfo):
             v1New = vertexDict[v1Old]
             v2New = vertexDict[v2Old]
             v3New = vertexDict[v3Old]
-            oldFace = ((v1Old, v2Old, v3Old))
             facesData.append((v1New, v2New, v3New))
 
-            if (useSeams):
-                if (mergedVertList[v1New].merged
-                        or mergedVertList[v2New].merged
-                        or mergedVertList[v3New].merged):
-
-                    findMergedEdges(seamEdgesDict, vertexDict, mergedVertList, mergedVertices, oldFace)
+            if useSeams and (
+                mergedVertList[v1New].merged
+                or mergedVertList[v2New].merged
+                or mergedVertList[v3New].merged
+            ):
+                oldFace = ((v1Old, v2Old, v3Old))
+                findMergedEdges(seamEdgesDict, vertexDict, mergedVertList, mergedVertices, oldFace)
 
         # merge Vertices of same coord and normal?
         mergeByNormal = True
@@ -603,11 +594,7 @@ def importMesh(armature_ob, meshInfo):
         origFaces = faceTransformList(meshInfo.faces)
         makeUvs(mesh_da, origFaces, uvLayers, vertColors)
 
-        if (xpsData.header):
-            flags = xpsData.header.flags
-        else:
-            flags = read_bin_xps.flagsDefault()
-
+        flags = xpsData.header.flags if xpsData.header else read_bin_xps.flagsDefault()
         # Make Material
         material_creator.makeMaterial(xpsSettings, rootDir, mesh_da, meshInfo, flags)
 
@@ -623,12 +610,12 @@ def importMesh(armature_ob, meshInfo):
 
         # import custom normals
         verts_nor = xpsSettings.importNormals
-        use_edges = True
         # unique_smooth_groups = True
 
         if verts_nor:
             mesh_da.create_normals_split()
             meshCorrected = mesh_da.validate(clean_customdata=False)  # *Very* important to not remove nors!
+            use_edges = True
             mesh_da.update(calc_edges=use_edges)
             mesh_da.normals_split_custom_set_from_vertices(normals)
             mesh_da.use_auto_smooth = True
@@ -662,18 +649,18 @@ def findMergedEdges(seamEdgesDict, vertexDict, mergedVertList, mergedVertices, o
 
 
 def findMergedVert(seamEdgesDict, vertexDict, mergedVertList, mergedVertices, oldFace, mergedVert):
-    v1Old = oldFace[0]
-    v2Old = oldFace[1]
-    v3Old = oldFace[2]
     # v1New = vertexDict[v1Old]
     # v2New = vertexDict[v2Old]
     # v3New = vertexDict[v3Old]
     vertX = vertexDict[mergedVert]
-    if (mergedVertList[vertX].merged):
+    if mergedVertList[vertX].merged:
         # List Merged vertices original Create
         if (mergedVertices.get(vertX) is None):
             mergedVertices[vertX] = []
 
+        v1Old = oldFace[0]
+        v2Old = oldFace[1]
+        v3Old = oldFace[2]
         # List Merged vertices original Loop
         for facesList in mergedVertices[vertX]:
             # Check if original vertices merge
@@ -689,7 +676,7 @@ def findMergedVert(seamEdgesDict, vertexDict, mergedVertList, mergedVertices, ol
                     if (mergedVert != v3Old):
                         checkEdgePairForSeam(i, seamEdgesDict, vertexDict, vertX, v3Old, facesList)
                     matchV1 = True
-                i = i + 1
+                i += 1
 
         # List Merged vertices original Append
         mergedVertices[vertX].append((v1Old, v2Old, v3Old))
@@ -736,9 +723,7 @@ def assignVertexGroup(vert, armature, mesh_ob):
         boneIdx = vertBoneWeight.id
         vertexWeight = vertBoneWeight.weight
         if vertexWeight != 0:
-            # use original index to get current bone name in blender
-            boneName = getBoneName(boneIdx)
-            if boneName:
+            if boneName := getBoneName(boneIdx):
                 vertGroup = mesh_ob.vertex_groups.get(boneName)
                 if not vertGroup:
                     vertGroup = mesh_ob.vertex_groups.new(name=boneName)

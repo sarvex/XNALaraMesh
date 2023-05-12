@@ -30,10 +30,7 @@ from bpy_extras.wm_utils.progress_report import (
 
 
 def name_compat(name):
-    if name is None:
-        return 'None'
-    else:
-        return name.replace(' ', '_')
+    return 'None' if name is None else name.replace(' ', '_')
 
 
 def mesh_triangulate(me):
@@ -76,8 +73,7 @@ def write_arl(scene, filepath, path_mode, copy_set, mtl_dict, armatures):
 def write_mtl(scene, filepath, path_mode, copy_set, mtl_dict):
     from mathutils import Color, Vector
 
-    world = scene.world
-    if world:
+    if world := scene.world:
         world_amb = world.ambient_color
     else:
         world_amb = Color((0.0, 0.0, 0.0))
@@ -163,8 +159,7 @@ def write_mtl(scene, filepath, path_mode, copy_set, mtl_dict):
 
             # Write images!
             if face_img:  # We have an image on the face!
-                filepath = face_img.filepath
-                if filepath:  # may be '' for generated images
+                if filepath := face_img.filepath:
                     # write relative image path
                     filepath = bpy_extras.io_utils.path_reference(
                         filepath, source_dir, dest_dir,
@@ -180,8 +175,7 @@ def write_mtl(scene, filepath, path_mode, copy_set, mtl_dict):
                 # backwards so topmost are highest priority
                 for mtex in reversed(mat.texture_slots):
                     if mtex and mtex.texture and mtex.texture.type == 'IMAGE':
-                        image = mtex.texture.image
-                        if image:
+                        if image := mtex.texture.image:
                             # texface overrides others
                             if (mtex.use_map_color_diffuse and
                                     (face_img is None) and
@@ -217,9 +211,8 @@ def write_mtl(scene, filepath, path_mode, copy_set, mtl_dict):
                         image.filepath, source_dir, dest_dir,
                         path_mode, "", copy_set, image.library)
                     options = []
-                    if key == "map_Bump":
-                        if mtex.normal_factor != 1.0:
-                            options.append('-bm %.6f' % mtex.normal_factor)
+                    if key == "map_Bump" and mtex.normal_factor != 1.0:
+                        options.append('-bm %.6f' % mtex.normal_factor)
                     if mtex.offset != Vector((0.0, 0.0, 0.0)):
                         options.append('-o %.6f %.6f %.6f' % mtex.offset[:])
                     if mtex.scale != Vector((1.0, 1.0, 1.0)):
@@ -231,11 +224,9 @@ def test_nurbs_compat(ob):
     if ob.type != 'CURVE':
         return False
 
-    for nu in ob.data.splines:
-        if nu.point_count_v == 1 and nu.type != 'BEZIER':  # not a surface and not bezier
-            return True
-
-    return False
+    return any(
+        nu.point_count_v == 1 and nu.type != 'BEZIER' for nu in ob.data.splines
+    )
 
 
 def write_nurb(fw, ob, ob_mat):
@@ -244,14 +235,16 @@ def write_nurb(fw, ob, ob_mat):
 
     # use negative indices
     for nu in cu.splines:
-        if nu.type == 'POLY':
+        if nu.type == 'BEZIER':
+            DEG_ORDER_U = nu.order_u - 1  # odd but tested to be correct
+
+            print("\tWarning, bezier curve:", ob.name, "only poly and nurbs curves supported")
+            continue
+
+        elif nu.type == 'POLY':
             DEG_ORDER_U = 1
         else:
             DEG_ORDER_U = nu.order_u - 1  # odd but tested to be correct
-
-        if nu.type == 'BEZIER':
-            print("\tWarning, bezier curve:", ob.name, "only poly and nurbs curves supported")
-            continue
 
         if nu.point_count_v > 1:
             print("\tWarning, surface:", ob.name, "only poly and nurbs curves supported")
@@ -276,14 +269,13 @@ def write_nurb(fw, ob, ob_mat):
 
         curve_ls = [-(i + 1) for i in range(pt_num)]
 
-        # 'curv' keyword
         if do_closed:
             if DEG_ORDER_U == 1:
                 pt_num += 1
                 curve_ls.append(-1)
             else:
                 pt_num += DEG_ORDER_U
-                curve_ls = curve_ls + curve_ls[0:DEG_ORDER_U]
+                curve_ls += curve_ls[:DEG_ORDER_U]
 
         fw('curv 0.0 1.0 %s\n' % (" ".join([str(i) for i in curve_ls])))  # Blender has no U and V values for the curve
 

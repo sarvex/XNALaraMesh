@@ -11,9 +11,7 @@ def mockData():
     xpsHeader = buildHeader()
     bones = buildBones()
     meshes = buildMeshes()
-    xpsData = xps_types.XpsData(xpsHeader, bones, meshes)
-
-    return xpsData
+    return xps_types.XpsData(xpsHeader, bones, meshes)
 
 
 def fillPoseString(poseBytes):
@@ -102,15 +100,12 @@ def buildHeader(poseString=''):
 
 
 def buildBones():
-    bones = []
-
     id = 0
     name = 'bone1'
     co = [0, 0, 0]
     parentId = -1
     bone = xps_types.XpsBone(id, name, co, parentId)
-    bones.append(bone)
-
+    bones = [bone]
     id = 1
     name = 'bone2'
     co = [0.5, 0.5, 0.5]
@@ -121,34 +116,26 @@ def buildBones():
 
 
 def buildMeshes():
-    meshes = []
     meshName = 'Mesh1'
     uvLayerCount = 1
 
-    # Textures
-    textures = []
     texId = 0
     textureFile = 'textutefile1.png'
     uvLayerId = 0
     xpsTexture = xps_types.XpsTexture(texId, textureFile, uvLayerId)
-    textures.append(xpsTexture)
-
+    textures = [xpsTexture]
     texId = 1
     textureFile = 'textutefile2.png'
     uvLayerId = 0
     xpsTexture = xps_types.XpsTexture(texId, textureFile, uvLayerId)
     textures.append(xpsTexture)
 
-    # Vertices
-    vertex = []
-
     # Vertex1
     vertexId = 0
     coord = (1, 0, 0)
     normal = (0, 0, 1)
     vertexColor = (255, 255, 255, 0)
-    uvs = []
-    uvs.append((.2, .4))
+    uvs = [(.2, .4)]
     boneWeights = (
         xps_types.BoneWeight(0, 0),
         xps_types.BoneWeight(0, 0),
@@ -162,8 +149,7 @@ def buildMeshes():
     coord = (0, 1, 0)
     normal = (0, 1, 0)
     vertexColor = (255, 255, 255, 0)
-    uvs = []
-    uvs.append((.3, .5))
+    uvs = [(.3, .5)]
     boneWeights = (
         xps_types.BoneWeight(0, 0),
         xps_types.BoneWeight(0, 0),
@@ -171,15 +157,13 @@ def buildMeshes():
         xps_types.BoneWeight(0, 0))
     xpsVertex = xps_types.XpsVertex(
         vertexId, coord, normal, vertexColor, uvs, boneWeights)
-    vertex.append(xpsVertex)
-
+    vertex = [xpsVertex]
     # Vertex3
     vertexId = 2
     coord = (0, 0, 1)
     normal = (1, 0, 0)
     vertexColor = (255, 255, 255, 0)
-    uvs = []
-    uvs.append((.3, .9))
+    uvs = [(.3, .9)]
     boneWeights = (
         xps_types.BoneWeight(0, 0),
         xps_types.BoneWeight(0, 0),
@@ -195,9 +179,7 @@ def buildMeshes():
 
     xpsMesh = xps_types.XpsMesh(
         meshName, textures, vertex, faces, uvLayerCount)
-    meshes.append(xpsMesh)
-
-    return meshes
+    return [xpsMesh]
 
 
 if __name__ == "__main__":

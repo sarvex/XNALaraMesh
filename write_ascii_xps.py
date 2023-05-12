@@ -17,7 +17,7 @@ def writeBones(xpsSettings, bones):
             co = bone.co
             if parentId is None:
                 parentId = -1
-            bonesString.write('{}\n'.format(name))
+            bonesString.write(f'{name}\n')
             bonesString.write('{:d} # parent index\n'.format(parentId))
             bonesString.write('{:.7G} {:.7G} {:.7G}\n'.format(*co))
     bonesString.seek(0)
@@ -90,7 +90,7 @@ def writePose(xpsData):
         coordDelta = roundTrans(xpsBoneData.coordDelta)
         scale = roundScale(xpsBoneData.scale)
 
-        x1 = '{}: '.format(boneName)
+        x1 = f'{boneName}: '
         x2 = '{:G} {:G} {:G} '.format(*rotDelta)
         x3 = '{:G} {:G} {:G} '.format(*coordDelta)
         x4 = '{:G} {:G} {:G} '.format(*scale)

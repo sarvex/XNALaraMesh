@@ -129,10 +129,10 @@ def loadImage(textureFilepath):
     fileRoot, fileExt = os.path.splitext(textureFilename)
 
     if (os.path.isfile(textureFilepath)):
-        print("Loading Texture: " + textureFilename)
+        print(f"Loading Texture: {textureFilename}")
         image = bpy.data.images.load(filepath=textureFilepath, check_existing=True)
     else:
-        print("Warning. Texture not found " + textureFilename)
+        print(f"Warning. Texture not found {textureFilename}")
         image = bpy.data.images.new(
             name=textureFilename, width=1024, height=1024, alpha=True,
             float_buffer=False)

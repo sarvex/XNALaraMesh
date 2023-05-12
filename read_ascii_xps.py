@@ -13,8 +13,7 @@ def readUvVert(file):
     values = ascii_ops.splitValues(line)
     x = (ascii_ops.getFloat(values[0]))  # X pos
     y = (ascii_ops.getFloat(values[1]))  # Y pos
-    coords = [x, y]
-    return coords
+    return [x, y]
 
 
 def readXYZ(file):
@@ -23,14 +22,11 @@ def readXYZ(file):
     x = (ascii_ops.getFloat(values[0]))  # X pos
     y = (ascii_ops.getFloat(values[1]))  # Y pos
     z = (ascii_ops.getFloat(values[2]))  # Z pos
-    coords = [x, y, z]
-    return coords
+    return [x, y, z]
 
 
 def fillArray(array, minLen, value):
-    # Complete the array with selected value
-    filled = array + [value] * (minLen - len(array))
-    return filled
+    return array + [value] * (minLen - len(array))
 
 
 def read4Float(file):
@@ -41,24 +37,21 @@ def read4Float(file):
     y = (ascii_ops.getFloat(values[1]))
     z = (ascii_ops.getFloat(values[2]))
     w = (ascii_ops.getFloat(values[3]))
-    coords = [x, y, z, w]
-    return coords
+    return [x, y, z, w]
 
 
 def readBoneWeight(file):
     line = ascii_ops.readline(file)
     values = ascii_ops.splitValues(line)
     values = fillArray(values, 4, 0)
-    weights = [ascii_ops.getFloat(val) for val in values]
-    return weights
+    return [ascii_ops.getFloat(val) for val in values]
 
 
 def readBoneId(file):
     line = ascii_ops.readline(file)
     values = ascii_ops.splitValues(line)
     values = fillArray(values, 4, 0)
-    ids = [ascii_ops.getInt(val) for val in values]
-    return ids
+    return [ascii_ops.getInt(val) for val in values]
 
 
 def read4Int(file):
@@ -69,8 +62,7 @@ def read4Int(file):
     g = ascii_ops.getInt(values[1])
     b = ascii_ops.getInt(values[2])
     a = ascii_ops.getInt(values[3])
-    vertexColor = [r, g, b, a]
-    return vertexColor
+    return [r, g, b, a]
 
 
 def readTriIdxs(file):
@@ -79,8 +71,7 @@ def readTriIdxs(file):
     face1 = ascii_ops.getInt(values[0])
     face2 = ascii_ops.getInt(values[1])
     face3 = ascii_ops.getInt(values[2])
-    faceLoop = [face1, face2, face3]
-    return faceLoop
+    return [face1, face2, face3]
 
 
 def readBones(file):
@@ -101,7 +92,7 @@ def readMeshes(file, hasBones):
     meshes = []
     meshCount = ascii_ops.readInt(file)
 
-    for meshId in range(meshCount):
+    for _ in range(meshCount):
         # Name
         meshName = ascii_ops.readString(file)
         if not meshName:
@@ -129,22 +120,19 @@ def readMeshes(file, hasBones):
             vertexColor = read4Int(file)
 
             uvs = []
-            for uvLayerId in range(uvLayerCount):
+            for _ in range(uvLayerCount):
                 uvVert = readUvVert(file)
                 uvs.append(uvVert)
-                # if ????
-                # tangent????
-                # tangent = read4float(file)
-
             boneWeights = []
             if hasBones:
                 # if cero bones dont have weights to read
                 boneIdx = readBoneId(file)
                 boneWeight = readBoneWeight(file)
 
-                for idx in range(len(boneIdx)):
-                    boneWeights.append(
-                        xps_types.BoneWeight(boneIdx[idx], boneWeight[idx]))
+                boneWeights.extend(
+                    xps_types.BoneWeight(boneIdx[idx], boneWeight[idx])
+                    for idx in range(len(boneIdx))
+                )
             xpsVertex = xps_types.XpsVertex(
                 vertexId, coord, normal, vertexColor, uvs, boneWeights)
             vertex.append(xpsVertex)
@@ -152,7 +140,7 @@ def readMeshes(file, hasBones):
         # Faces
         faces = []
         triCount = ascii_ops.readInt(file)
-        for i in range(triCount):
+        for _ in range(triCount):
             triIdxs = readTriIdxs(file)
             faces.append(triIdxs)
         xpsMesh = xps_types.XpsMesh(
@@ -222,16 +210,14 @@ def readXpsModel(filename):
     hasBones = bool(bones)
     print('Reading Meshes')
     meshes = readMeshes(ioStream, hasBones)
-    xpsModelData = xps_types.XpsData(bones=bones, meshes=meshes)
-    return xpsModelData
+    return xps_types.XpsData(bones=bones, meshes=meshes)
 
 
 def readXpsPose(filename):
     ioStream = readIoStream(filename)
     # print('Import Pose')
     poseString = readPoseFile(ioStream)
-    bonesPose = poseData(poseString)
-    return bonesPose
+    return poseData(poseString)
 
 
 def readBoneDict(filename):

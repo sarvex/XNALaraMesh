@@ -40,20 +40,17 @@ def readInt(file):
     """Read line. Return Int."""
     line = readline(file)
     value = ignoreComment(line)
-    number = getInt(value)
-    return number
+    return getInt(value)
 
 
 def readString(file):
     """Read line. Ignore Comments."""
     # String Lenght
     line = readline(file)
-    string = ignoreStringComment(line)
-    return string
+    return ignoreStringComment(line)
 
 
 def splitValues(line):
     """Read line. Return value list."""
     line = line.replace('#', ' ')
-    values = line.split()
-    return values
+    return line.split()

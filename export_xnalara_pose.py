@@ -60,7 +60,7 @@ def xpsExport(filename):
     print("Exporting Pose: ", filename)
 
     rootDir, file = os.path.split(filename)
-    print('rootDir: {}'.format(rootDir))
+    print(f'rootDir: {rootDir}')
 
     xpsPoseData = exportPose()
 
@@ -71,7 +71,7 @@ def exportPose():
     armature = next((obj for obj in bpy.context.selected_objects
                      if obj.type == 'ARMATURE'), None)
     boneCount = len(armature.data.bones)
-    print('Exporting Pose', str(boneCount), 'bones')
+    print('Exporting Pose', boneCount, 'bones')
 
     return xpsPoseData(armature)
 
@@ -106,9 +106,9 @@ def xpsPoseBone(poseBone, objectMatrix):
     boneRotDelta = xpsBoneRotate(poseBone)
     boneCoordDelta = xpsBoneTranslate(poseBone, objectMatrix)
     boneScale = xpsBoneScale(poseBone)
-    boneData = xps_types.XpsBonePose(boneName, boneCoordDelta, boneRotDelta,
-                                     boneScale)
-    return boneData
+    return xps_types.XpsBonePose(
+        boneName, boneCoordDelta, boneRotDelta, boneScale
+    )
 
 
 def eulerToXpsBoneRot(rotEuler):
@@ -123,8 +123,7 @@ def vectorTransform(vec):
     y = vec.y
     z = vec.z
     y = -y
-    newVec = Vector((x, z, y))
-    return newVec
+    return Vector((x, z, y))
 
 
 def vectorTransformTranslate(vec):
@@ -132,16 +131,14 @@ def vectorTransformTranslate(vec):
     y = vec.y
     z = vec.z
     y = -y
-    newVec = Vector((x, z, y))
-    return newVec
+    return Vector((x, z, y))
 
 
 def vectorTransformScale(vec):
     x = vec.x
     y = vec.y
     z = vec.z
-    newVec = Vector((x, y, z))
-    return newVec
+    return Vector((x, y, z))
 
 
 def xpsBoneRotate(poseBone):
@@ -153,8 +150,7 @@ def xpsBoneRotate(poseBone):
     rotQuat = editMatLocal @ poseMatGlobal @ editMatLocal.inverted()
     rotEuler = rotQuat.to_euler('YXZ')
     xpsRot = eulerToXpsBoneRot(rotEuler)
-    rot = vectorTransform(xpsRot)
-    return rot
+    return vectorTransform(xpsRot)
 
 
 def xpsBoneTranslate(poseBone, objectMatrix):

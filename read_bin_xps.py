@@ -22,7 +22,7 @@ def flagName(flag):
 
 
 def flagsDefault():
-    flags = {
+    return {
         xps_const.BACK_FACE_CULLING: False,
         xps_const.ALWAYS_FORCE_CULLING: False,
         xps_const.MODEL_CAST_SHADOWS: True,
@@ -32,7 +32,6 @@ def flagsDefault():
         xps_const.GLOSS: 10,
         xps_const.HAS_BONE_DIRECTIONS: False,
     }
-    return flags
 
 
 def flagValue(flag, value):
@@ -65,21 +64,19 @@ def intToCoords(flag):
 def printNormalMapSwizzel(tangentSpaceRed, tangentSpaceGreen, tangentSpaceBlue):
     # Default XPS NormalMapTangentSpace == 0 1 0 == X+ Y- Z+
     print('Tangent Space Normal Map Swizzel Coordinates:')
-    print('X{} Y{} Z{}'.format(intToCoords(tangentSpaceRed), intToCoords(tangentSpaceGreen), intToCoords(tangentSpaceBlue)))
+    print(
+        f'X{intToCoords(tangentSpaceRed)} Y{intToCoords(tangentSpaceGreen)} Z{intToCoords(tangentSpaceBlue)}'
+    )
     print('')
 
 
 def readFilesString(file):
-    lengthByte2 = 0
-
     lengthByte1 = bin_ops.readByte(file)
 
-    if (lengthByte1 >= xps_const.LIMIT):
-        lengthByte2 = bin_ops.readByte(file)
+    lengthByte2 = bin_ops.readByte(file) if (lengthByte1 >= xps_const.LIMIT) else 0
     length = (lengthByte1 % xps_const.LIMIT) + (lengthByte2 * xps_const.LIMIT)
 
-    string = bin_ops.readString(file, length)
-    return string
+    return bin_ops.readString(file, length)
 
 
 def readVertexColor(file):
@@ -87,23 +84,20 @@ def readVertexColor(file):
     g = bin_ops.readByte(file)
     b = bin_ops.readByte(file)
     a = bin_ops.readByte(file)
-    vertexColor = [r, g, b, a]
-    return vertexColor
+    return [r, g, b, a]
 
 
 def readUvVert(file):
     x = bin_ops.readSingle(file)  # X pos
     y = bin_ops.readSingle(file)  # Y pos
-    coords = [x, y]
-    return coords
+    return [x, y]
 
 
 def readXYZ(file):
     x = bin_ops.readSingle(file)  # X pos
     y = bin_ops.readSingle(file)  # Y pos
     z = bin_ops.readSingle(file)  # Z pos
-    coords = [x, y, z]
-    return coords
+    return [x, y, z]
 
 
 def read4Float(file):
@@ -111,8 +105,7 @@ def read4Float(file):
     y = bin_ops.readSingle(file)
     z = bin_ops.readSingle(file)
     w = bin_ops.readSingle(file)
-    coords = [x, y, z, w]
-    return coords
+    return [x, y, z, w]
 
 
 def read4Int16(file):
@@ -120,16 +113,14 @@ def read4Int16(file):
     g = bin_ops.readInt16(file)
     b = bin_ops.readInt16(file)
     a = bin_ops.readInt16(file)
-    vertexColor = [r, g, b, a]
-    return vertexColor
+    return [r, g, b, a]
 
 
 def readTriIdxs(file):
     face1 = bin_ops.readUInt32(file)
     face2 = bin_ops.readUInt32(file)
     face3 = bin_ops.readUInt32(file)
-    faceLoop = [face1, face2, face3]
-    return faceLoop
+    return [face1, face2, face3]
 
 
 def readHeader(file):
@@ -153,9 +144,7 @@ def readHeader(file):
     filesString = readFilesString(file)
     xpsPoseData = None
 
-    # print('*'*80)
-    hasTangent = bin_ops.hasTangentVersion(version_mayor, version_minor)
-    if (hasTangent):
+    if hasTangent := bin_ops.hasTangentVersion(version_mayor, version_minor):
         # print('OLD Format')
         settingsStream = io.BytesIO(file.read(settingsLen * 4))
     else:
@@ -167,7 +156,7 @@ def readHeader(file):
         valuesRead += 1 * 4
         # print('hash', hash)
         # print('items', items)
-        for i in range(items):
+        for _ in range(items):
             # print('valuesRead', valuesRead)
             optType = bin_ops.readUInt32(file)
             valuesRead += 1 * 4
@@ -200,7 +189,7 @@ def readHeader(file):
                 loopStart = valuesRead // 4
                 loopFinish = settingsLen
                 # print (loopStart, loopFinish)
-                for j in range(loopStart, loopFinish):
+                for _ in range(loopStart, loopFinish):
                     # print('waste',j - loopStart)
                     waste = bin_ops.readUInt32(file)
 
@@ -233,13 +222,13 @@ def findHeader(file):
 
 
 def readNone(file, optcount):
-    for i in range(optcount):
+    for _ in range(optcount):
         waste = bin_ops.readUInt32(file)
 
 
 def readFlags(file, optcount):
     flags = {}
-    for i in range(optcount):
+    for _ in range(optcount):
         flag = bin_ops.readUInt32(file)
         value = bin_ops.readUInt32(file)
         flags[flagName(flag)] = flagValue(flag, value)
@@ -287,7 +276,7 @@ def readMeshes(file, xpsHeader, hasBones):
     hasTangent = bin_ops.hasTangentVersion(verMayor, verMinor, hasHeader)
     hasVariableWeights = bin_ops.hasVariableWeights(verMayor, verMinor, hasHeader)
 
-    for meshId in range(meshCount):
+    for _ in range(meshCount):
         # Name
         meshName = readFilesString(file)
         if not meshName:
@@ -316,7 +305,7 @@ def readMeshes(file, xpsHeader, hasBones):
             vertexColor = readVertexColor(file)
 
             uvs = []
-            for uvLayerId in range(uvLayerCount):
+            for _ in range(uvLayerCount):
                 uvVert = readUvVert(file)
                 uvs.append(uvVert)
                 if hasTangent:
@@ -324,23 +313,13 @@ def readMeshes(file, xpsHeader, hasBones):
 
             boneWeights = []
             if hasBones:
-                # if cero bones dont have weights to read
-
-                boneIdx = []
-                boneWeight = []
-                if hasVariableWeights:
-                    weightsCount = bin_ops.readInt16(file)
-                else:
-                    weightsCount = 4
-
-                for x in range(weightsCount):
-                    boneIdx.append(bin_ops.readInt16(file))
-                for x in range(weightsCount):
-                    boneWeight.append(bin_ops.readSingle(file))
-
-                for idx in range(len(boneIdx)):
-                    boneWeights.append(
-                        xps_types.BoneWeight(boneIdx[idx], boneWeight[idx]))
+                weightsCount = bin_ops.readInt16(file) if hasVariableWeights else 4
+                boneIdx = [bin_ops.readInt16(file) for _ in range(weightsCount)]
+                boneWeight = [bin_ops.readSingle(file) for _ in range(weightsCount)]
+                boneWeights.extend(
+                    xps_types.BoneWeight(boneIdx[idx], boneWeight[idx])
+                    for idx in range(len(boneIdx))
+                )
             xpsVertex = xps_types.XpsVertex(
                 vertexId, coord, normal, vertexColor, uvs, boneWeights)
             vertex.append(xpsVertex)
@@ -348,7 +327,7 @@ def readMeshes(file, xpsHeader, hasBones):
         # Faces
         faces = []
         triCount = bin_ops.readUInt32(file)
-        for i in range(triCount):
+        for _ in range(triCount):
             triIdxs = readTriIdxs(file)
             faces.append(triIdxs)
         xpsMesh = xps_types.XpsMesh(
@@ -377,15 +356,14 @@ def readXpsModel(filename):
     meshes = readMeshes(ioStream, xpsHeader, hasBones)
     print('Read', len(meshes), 'Meshes')
 
-    xpsData = xps_types.XpsData(xpsHeader, bones, meshes)
-    return xpsData
+    return xps_types.XpsData(xpsHeader, bones, meshes)
 
 
 def readDefaultPose(file, poseLenghtUnround, poseBones):
     # print('Import Pose')
     poseBytes = b''
     if poseLenghtUnround:
-        for i in range(0, poseBones):
+        for _ in range(0, poseBones):
             poseBytes += file.readline()
 
     poseLenght = bin_ops.roundToMultiple(
@@ -393,8 +371,7 @@ def readDefaultPose(file, poseLenghtUnround, poseBones):
     emptyBytes = poseLenght - poseLenghtUnround
     file.read(emptyBytes)
     poseString = bin_ops.decodeBytes(poseBytes)
-    bonesPose = read_ascii_xps.poseData(poseString)
-    return bonesPose
+    return read_ascii_xps.poseData(poseString)
 
 
 if __name__ == "__main__":

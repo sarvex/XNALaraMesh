@@ -51,7 +51,7 @@ class XPSShaderWrapper(node_shader_utils.ShaderWrapper):
             elif n.bl_idname == 'ShaderNodeGroup' and n.node_tree.name == 'XPS Shader' and n.outputs[0].is_linked:
                 # print("xps shader found")
                 node_principled = n
-                for lnk in n.outputs[0].links:
+                for lnk in node_principled.outputs[0].links:
                     node_out = lnk.to_node
                     if node_out.bl_idname == 'ShaderNodeOutputMaterial':
                         break
@@ -296,15 +296,13 @@ class ShaderEnvironmentTextureWrapper():
     # Image.
 
     def node_image_get(self):
+        if self._node_image is ... and self.socket_dst.is_linked:
+            node_image = self.socket_dst.links[0].from_node
+            if node_image.bl_idname == 'ShaderNodeTexImage':
+                self._node_image = node_image
+                self.owner_shader._grid_to_location(0, 0, ref_node=node_image)
         if self._node_image is ...:
-            # Running only once, trying to find a valid image node.
-            if self.socket_dst.is_linked:
-                node_image = self.socket_dst.links[0].from_node
-                if node_image.bl_idname == 'ShaderNodeTexImage':
-                    self._node_image = node_image
-                    self.owner_shader._grid_to_location(0, 0, ref_node=node_image)
-            if self._node_image is ...:
-                self._node_image = None
+            self._node_image = None
         if self._node_image is None and not self.is_readonly:
             tree = self.owner_shader.material.node_tree
 
@@ -381,8 +379,8 @@ class ShaderEnvironmentTextureWrapper():
                 if node_mapping.bl_idname == 'ShaderNodeMapping':
                     self._node_mapping = node_mapping
                     self.owner_shader._grid_to_location(0, 0 + self.grid_row_diff, ref_node=node_mapping)
-            if self._node_mapping is ...:
-                self._node_mapping = None
+        if self._node_mapping is ...:
+            self._node_mapping = None
         if self._node_mapping is None and not self.is_readonly:
             # Find potential existing link into image's Vector input.
             socket_dst = self.node_image.inputs["Vector"]

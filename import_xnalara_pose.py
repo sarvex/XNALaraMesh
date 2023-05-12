@@ -119,11 +119,7 @@ def blenderImportFinalize():
 
 
 def loadXpsFile(filename):
-    # dirpath, file = os.path.split(filename)
-    # basename, ext = os.path.splitext(file)
-    xpsData = read_ascii_xps.readXpsPose(filename)
-
-    return xpsData
+    return read_ascii_xps.readXpsPose(filename)
 
 
 @timing
@@ -137,7 +133,7 @@ def xpsImport(filename):
     print("Importing Pose: ", filename)
 
     rootDir, file = os.path.split(filename)
-    print('rootDir: {}'.format(rootDir))
+    print(f'rootDir: {rootDir}')
 
     xpsData = loadXpsFile(filename)
 
@@ -146,7 +142,7 @@ def xpsImport(filename):
 
 def importPose():
     boneCount = len(xpsData)
-    print('Importing Pose', str(boneCount), 'bones')
+    print('Importing Pose', boneCount, 'bones')
 
     armature = bpy.context.active_object
     setXpsPose(armature, xpsData)
@@ -204,8 +200,7 @@ def vectorTransform(vec):
     y = vec.y
     z = vec.z
     z = -z
-    newVec = Vector((x, z, y))
-    return newVec
+    return Vector((x, z, y))
 
 
 def vectorTransformTranslate(vec):
@@ -213,16 +208,14 @@ def vectorTransformTranslate(vec):
     y = vec.y
     z = vec.z
     z = -z
-    newVec = Vector((x, z, y))
-    return newVec
+    return Vector((x, z, y))
 
 
 def vectorTransformScale(vec):
     x = vec.x
     y = vec.y
     z = vec.z
-    newVec = Vector((x, y, z))
-    return newVec
+    return Vector((x, y, z))
 
 
 def xpsBoneRotate(poseBone, rotDelta):

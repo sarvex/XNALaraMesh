@@ -64,8 +64,12 @@ def obj_image_load(imagepath, DIR, recursive, relpath):
     but tries to replace '_' with ' ' for Max's exporter replaces spaces with underscores.
     """
     if "_" in imagepath:
-        image = load_image(imagepath.replace("_", " "), DIR, recursive=recursive, relpath=relpath)
-        if image:
+        if image := load_image(
+            imagepath.replace("_", " "),
+            DIR,
+            recursive=recursive,
+            relpath=relpath,
+        ):
             return image
 
     return load_image(imagepath, DIR, recursive=recursive, place_holder=True, relpath=relpath)
@@ -211,7 +215,7 @@ def create_materials(filepath, relpath,
                 mtex.scale.z = float(map_scale[2])
 
     # Add an MTL with the same name as the obj if no MTLs are spesified.
-    temp_mtl = os.path.splitext((os.path.basename(filepath)))[0] + ".mtl"
+    temp_mtl = f"{os.path.splitext(os.path.basename(filepath))[0]}.mtl"
 
     if os.path.exists(os.path.join(DIR, temp_mtl)):
         material_libs.add(temp_mtl)
@@ -245,199 +249,197 @@ def create_materials(filepath, relpath,
 
             # print('\t\tloading mtl: %e' % mtlpath)
             context_material = None
-            mtl = open(mtlpath, 'rb')
-            for line in mtl:  # .readlines():
-                line = line.strip()
-                if not line or line.startswith(b'#'):
-                    continue
+            with open(mtlpath, 'rb') as mtl:
+                for line in mtl:  # .readlines():
+                    line = line.strip()
+                    if not line or line.startswith(b'#'):
+                        continue
 
-                line_split = line.split()
-                line_id = line_split[0].lower()
+                    line_split = line.split()
+                    line_id = line_split[0].lower()
 
-                if line_id == b'newmtl':
-                    # Finalize previous mat, if any.
-                    if context_material:
-                        emit_value = sum(emit_colors) / 3.0
-                        if emit_value > 1e-6:
-                            # We have to adapt it to diffuse color too...
-                            emit_value /= sum(context_material.diffuse_color) / 3.0
-                        context_material.emit = emit_value
+                    if line_id == b'newmtl':
+                                            # Finalize previous mat, if any.
+                        if context_material:
+                            emit_value = sum(emit_colors) / 3.0
+                            if emit_value > 1e-6:
+                                # We have to adapt it to diffuse color too...
+                                emit_value /= sum(context_material.diffuse_color) / 3.0
+                            context_material.emit = emit_value
 
-                        if not do_ambient:
-                            context_material.ambient = 0.0
+                            if not do_ambient:
+                                context_material.ambient = 0.0
 
-                        if do_highlight:
-                            # FIXME, how else to use this?
-                            context_material.specular_intensity = 1.0
+                            if do_highlight:
+                                # FIXME, how else to use this?
+                                context_material.specular_intensity = 1.0
 
-                        if do_reflection:
-                            context_material.raytrace_mirror.use = True
-                            context_material.raytrace_mirror.reflect_factor = 1.0
+                            if do_reflection:
+                                context_material.raytrace_mirror.use = True
+                                context_material.raytrace_mirror.reflect_factor = 1.0
 
-                        if do_transparency:
-                            context_material.use_transparency = True
-                            context_material.transparency_method = 'RAYTRACE' if do_raytrace else 'Z_TRANSPARENCY'
-                            if "alpha" not in context_material_vars:
-                                context_material.alpha = 0.0
+                            if do_transparency:
+                                context_material.use_transparency = True
+                                context_material.transparency_method = 'RAYTRACE' if do_raytrace else 'Z_TRANSPARENCY'
+                                if "alpha" not in context_material_vars:
+                                    context_material.alpha = 0.0
 
-                        if do_glass:
-                            if "ior" not in context_material_vars:
+                            if do_glass and "ior" not in context_material_vars:
                                 context_material.raytrace_transparency.ior = 1.5
 
-                        if do_fresnel:
-                            context_material.raytrace_mirror.fresnel = 1.0  # could be any value for 'ON'
+                            if do_fresnel:
+                                context_material.raytrace_mirror.fresnel = 1.0  # could be any value for 'ON'
 
-                        """
+                            """
                         if do_raytrace:
                             context_material.use_raytrace = True
                         else:
                             context_material.use_raytrace = False
                         """
-                        # XXX, this is not following the OBJ spec, but this was
-                        # written when raytracing wasnt default, annoying to disable for blender users.
-                        context_material.use_raytrace = True
+                            # XXX, this is not following the OBJ spec, but this was
+                            # written when raytracing wasnt default, annoying to disable for blender users.
+                            context_material.use_raytrace = True
 
-                    context_material_name = line_value(line_split)
-                    context_material = unique_materials.get(context_material_name)
-                    context_material_vars.clear()
+                        context_material_name = line_value(line_split)
+                        context_material = unique_materials.get(context_material_name)
+                        context_material_vars.clear()
 
-                    emit_colors[:] = [0.0, 0.0, 0.0]
-                    do_ambient = True
-                    do_highlight = False
-                    do_reflection = False
-                    do_transparency = False
-                    do_glass = False
-                    do_fresnel = False
-                    do_raytrace = False
+                        emit_colors[:] = [0.0, 0.0, 0.0]
+                        do_ambient = True
+                        do_highlight = False
+                        do_reflection = False
+                        do_transparency = False
+                        do_glass = False
+                        do_fresnel = False
+                        do_raytrace = False
 
-                elif context_material:
-                    # we need to make a material to assign properties to it.
-                    if line_id == b'ka':
-                        context_material.mirror_color = (
-                            float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
-                        # This is highly approximated, but let's try to stick as close from exporter as possible... :/
-                        context_material.ambient = sum(context_material.mirror_color) / 3
-                    elif line_id == b'kd':
-                        context_material.diffuse_color = (
-                            float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
-                        context_material.diffuse_intensity = 1.0
-                    elif line_id == b'ks':
-                        context_material.specular_color = (
-                            float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
-                        context_material.specular_intensity = 1.0
-                    elif line_id == b'ke':
-                        # We cannot set context_material.emit right now, we need final diffuse color as well for this.
-                        emit_colors[:] = [
-                            float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3])]
-                    elif line_id == b'ns':
-                        context_material.specular_hardness = int((float_func(line_split[1]) * 0.51) + 1)
-                    elif line_id == b'ni':  # Refraction index (between 1 and 3).
-                        context_material.raytrace_transparency.ior = max(1, min(float_func(line_split[1]), 3))
-                        context_material_vars.add("ior")
-                    elif line_id == b'd':  # dissolve (transparency)
-                        context_material.alpha = float_func(line_split[1])
-                        context_material.use_transparency = True
-                        context_material.transparency_method = 'Z_TRANSPARENCY'
-                        context_material_vars.add("alpha")
-                    elif line_id == b'tr':  # translucency
-                        context_material.translucency = float_func(line_split[1])
-                    elif line_id == b'tf':
-                        # rgb, filter color, blender has no support for this.
-                        pass
-                    elif line_id == b'illum':
-                        illum = int(line_split[1])
-
-                        # inline comments are from the spec, v4.2
-                        if illum == 0:
-                            # Color on and Ambient off
-                            do_ambient = False
-                        elif illum == 1:
-                            # Color on and Ambient on
+                    elif context_material:
+                        # we need to make a material to assign properties to it.
+                        if line_id == b'ka':
+                            context_material.mirror_color = (
+                                float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
+                            # This is highly approximated, but let's try to stick as close from exporter as possible... :/
+                            context_material.ambient = sum(context_material.mirror_color) / 3
+                        elif line_id == b'kd':
+                            context_material.diffuse_color = (
+                                float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
+                            context_material.diffuse_intensity = 1.0
+                        elif line_id == b'ks':
+                            context_material.specular_color = (
+                                float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3]))
+                            context_material.specular_intensity = 1.0
+                        elif line_id == b'ke':
+                            # We cannot set context_material.emit right now, we need final diffuse color as well for this.
+                            emit_colors[:] = [
+                                float_func(line_split[1]), float_func(line_split[2]), float_func(line_split[3])]
+                        elif line_id == b'ns':
+                            context_material.specular_hardness = int((float_func(line_split[1]) * 0.51) + 1)
+                        elif line_id == b'ni':  # Refraction index (between 1 and 3).
+                            context_material.raytrace_transparency.ior = max(1, min(float_func(line_split[1]), 3))
+                            context_material_vars.add("ior")
+                        elif line_id == b'd':  # dissolve (transparency)
+                            context_material.alpha = float_func(line_split[1])
+                            context_material.use_transparency = True
+                            context_material.transparency_method = 'Z_TRANSPARENCY'
+                            context_material_vars.add("alpha")
+                        elif line_id == b'tr':  # translucency
+                            context_material.translucency = float_func(line_split[1])
+                        elif line_id == b'tf':
+                            # rgb, filter color, blender has no support for this.
                             pass
-                        elif illum == 2:
-                            # Highlight on
-                            do_highlight = True
-                        elif illum == 3:
-                            # Reflection on and Ray trace on
-                            do_reflection = True
-                            do_raytrace = True
-                        elif illum == 4:
-                            # Transparency: Glass on
-                            # Reflection: Ray trace on
-                            do_transparency = True
-                            do_reflection = True
-                            do_glass = True
-                            do_raytrace = True
-                        elif illum == 5:
-                            # Reflection: Fresnel on and Ray trace on
-                            do_reflection = True
-                            do_fresnel = True
-                            do_raytrace = True
-                        elif illum == 6:
-                            # Transparency: Refraction on
-                            # Reflection: Fresnel off and Ray trace on
-                            do_transparency = True
-                            do_reflection = True
-                            do_raytrace = True
-                        elif illum == 7:
-                            # Transparency: Refraction on
-                            # Reflection: Fresnel on and Ray trace on
-                            do_transparency = True
-                            do_reflection = True
-                            do_fresnel = True
-                            do_raytrace = True
-                        elif illum == 8:
-                            # Reflection on and Ray trace off
-                            do_reflection = True
-                        elif illum == 9:
-                            # Transparency: Glass on
-                            # Reflection: Ray trace off
-                            do_transparency = True
-                            do_reflection = True
-                            do_glass = True
-                        elif illum == 10:
-                            # Casts shadows onto invisible surfaces
+                        elif line_id == b'illum':
+                            illum = int(line_split[1])
 
-                            # blender can't do this
-                            pass
+                            # inline comments are from the spec, v4.2
+                            if illum == 0:
+                                # Color on and Ambient off
+                                do_ambient = False
+                            elif illum == 1:
+                                # Color on and Ambient on
+                                pass
+                            elif illum == 2:
+                                # Highlight on
+                                do_highlight = True
+                            elif illum == 3:
+                                # Reflection on and Ray trace on
+                                do_reflection = True
+                                do_raytrace = True
+                            elif illum == 4:
+                                # Transparency: Glass on
+                                # Reflection: Ray trace on
+                                do_transparency = True
+                                do_reflection = True
+                                do_glass = True
+                                do_raytrace = True
+                            elif illum == 5:
+                                # Reflection: Fresnel on and Ray trace on
+                                do_reflection = True
+                                do_fresnel = True
+                                do_raytrace = True
+                            elif illum == 6:
+                                # Transparency: Refraction on
+                                # Reflection: Fresnel off and Ray trace on
+                                do_transparency = True
+                                do_reflection = True
+                                do_raytrace = True
+                            elif illum == 7:
+                                # Transparency: Refraction on
+                                # Reflection: Fresnel on and Ray trace on
+                                do_transparency = True
+                                do_reflection = True
+                                do_fresnel = True
+                                do_raytrace = True
+                            elif illum == 8:
+                                # Reflection on and Ray trace off
+                                do_reflection = True
+                            elif illum == 9:
+                                # Transparency: Glass on
+                                # Reflection: Ray trace off
+                                do_transparency = True
+                                do_reflection = True
+                                do_glass = True
+                            elif illum == 10:
+                                # Casts shadows onto invisible surfaces
 
-                    elif line_id == b'map_ka':
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'Ka')
-                    elif line_id == b'map_ks':
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'Ks')
-                    elif line_id == b'map_kd':
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'Kd')
-                    elif line_id == b'map_ke':
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'Ke')
-                    elif line_id in {b'map_kn', b'map_bump', b'bump'}:  # 'bump' is incorrect but some files use it.
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'Bump')
-                    elif line_id in {b'map_d', b'map_tr'}:  # Alpha map - Dissolve
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'D')
+                                # blender can't do this
+                                pass
 
-                    elif line_id in {b'map_disp', b'disp'}:  # displacementmap
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'disp')
+                        elif line_id == b'map_ka':
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'Ka')
+                        elif line_id == b'map_ks':
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'Ks')
+                        elif line_id == b'map_kd':
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'Kd')
+                        elif line_id == b'map_ke':
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'Ke')
+                        elif line_id in {b'map_kn', b'map_bump', b'bump'}:  # 'bump' is incorrect but some files use it.
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'Bump')
+                        elif line_id in {b'map_d', b'map_tr'}:  # Alpha map - Dissolve
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'D')
 
-                    elif line_id in {b'map_refl', b'refl'}:  # reflectionmap
-                        img_data = line.split()[1:]
-                        if img_data:
-                            load_material_image(context_material, context_material_name, img_data, 'refl')
-                    else:
-                        print("\t%r:%r (ignored)" % (filepath, line))
-            mtl.close()
+                        elif line_id in {b'map_disp', b'disp'}:  # displacementmap
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'disp')
+
+                        elif line_id in {b'map_refl', b'refl'}:  # reflectionmap
+                            img_data = line.split()[1:]
+                            if img_data:
+                                load_material_image(context_material, context_material_name, img_data, 'refl')
+                        else:
+                            print("\t%r:%r (ignored)" % (filepath, line))
 
 
 def hideBone(bone):
@@ -458,8 +460,7 @@ def setMinimumLenght(bone):
     default_length = 0.005
     if bone.length == 0:
         bone.tail = bone.head - mathutils.Vector((0, .01, 0))
-    if bone.length < default_length:
-        bone.length = default_length
+    bone.length = max(bone.length, default_length)
 
 
 def create_armatures(filepath, relpath,
@@ -471,7 +472,7 @@ def create_armatures(filepath, relpath,
     DIR = os.path.dirname(filepath)
 
     # Add an MTL with the same name as the obj if no MTLs are spesified.
-    temp_arl = os.path.splitext((os.path.basename(filepath)))[0] + ".arl"
+    temp_arl = f"{os.path.splitext(os.path.basename(filepath))[0]}.arl"
 
     if os.path.exists(os.path.join(DIR, temp_arl)):
         armature_libs.add(temp_arl)
@@ -548,20 +549,19 @@ def create_armatures(filepath, relpath,
                     childBones = [childBone for childBone in edit_bone.children
                                   if visibleBone(childBone)]
                 else:
-                    childBones = [childBone for childBone in edit_bone.children]
+                    childBones = list(edit_bone.children)
 
                 if childBones:
                     # Set tail to children middle
                     edit_bone.tail = mathutils.Vector(map(sum, zip(*(childBone.head.xyz for childBone in childBones))))/len(childBones)
-                else:
-                    if edit_bone.parent:
-                        vec = edit_bone.parent.tail - edit_bone.head
-                        if (vec.length < .001):
-                            edit_bone.tail = edit_bone.parent.vector + edit_bone.head
-                            edit_bone.length = edit_bone.parent.length
-                        else:
-                            edit_bone.tail = (edit_bone.head - edit_bone.parent.tail) + edit_bone.head
-                            edit_bone.length = 0.1
+                elif edit_bone.parent:
+                    vec = edit_bone.parent.tail - edit_bone.head
+                    if (vec.length < .001):
+                        edit_bone.tail = edit_bone.parent.vector + edit_bone.head
+                        edit_bone.length = edit_bone.parent.length
+                    else:
+                        edit_bone.tail = (edit_bone.head - edit_bone.parent.tail) + edit_bone.head
+                        edit_bone.length = 0.1
 
             for edit_bone in me.edit_bones:
                 setMinimumLenght(edit_bone)
@@ -584,18 +584,15 @@ def split_mesh(verts_loc, faces, unique_materials, filepath, SPLIT_OB_OR_GROUP, 
     filename = os.path.splitext((os.path.basename(filepath)))[0]
 
     if not SPLIT_OB_OR_GROUP or not faces:
-        use_verts_nor = any((False if f[1] is ... else True) for f in faces)
-        use_verts_tex = any((False if f[2] is ... else True) for f in faces)
-        use_verts_col = any((False if f[3] is ... else True) for f in faces)
+        use_verts_nor = any(f[1] is not ... for f in faces)
+        use_verts_tex = any(f[2] is not ... for f in faces)
+        use_verts_col = any(f[3] is not ... for f in faces)
         # use the filename for the object name since we aren't chopping up the mesh.
         return [(verts_loc, faces, unique_materials, filename, use_verts_nor, use_verts_tex, use_verts_col, verts_bw)]
 
     def key_to_name(key):
         # if the key is a tuple, join it to make a string
-        if not key:
-            return filename  # assume its a string. make sure this is true if the splitting code is changed
-        else:
-            return key.decode('utf-8', 'replace')
+        return filename if not key else key.decode('utf-8', 'replace')
 
     # Return a key that makes the faces unique.
     face_split_dict = {}
